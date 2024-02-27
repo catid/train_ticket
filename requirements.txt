@@ -1,0 +1,7 @@
+deepspeed
+numpy
+wandb
+
+colorama
+Pillow
+tqdm
