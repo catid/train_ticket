@@ -97,10 +97,11 @@ def evaluate(model, dataset_dir, fp16=True):
 
     for file_path, label in tqdm(data, "Evaluating"):
         file_path = os.path.join(dataset_dir, "validation", file_path)
-        input_image = Image.open(file_path).convert("RGB")
+        input_image = Image.open(file_path).convert("L")
 
-        input_image = np.array(input_image)
-        input_tensor = torch.from_numpy(input_image).unsqueeze(0).permute(0, 3, 1, 2) / 255.0
+        input_tensor = torch.from_numpy(np.array(input_image)).unsqueeze(0).unsqueeze(0).float()  # Add batch and channel dimension
+        input_tensor = (input_tensor - 128.0) / 128.0  # Normalize to [-1, 1]
+
         if fp16:
             input_tensor = input_tensor.to(torch.float16)
         else:

@@ -375,8 +375,8 @@ if __name__ == '__main__':
     parser.add_argument("--wandb", action="store_true", help="WanDB logging")
     parser.add_argument('--name', type=str, default=None, metavar='N',
                         help='Name of the run (default: None)')
-    parser.add_argument('--project', type=str, default=None, metavar='N',
-                        help='Project name (default: None)')
+    parser.add_argument('--project', type=str, default="train_ticket", metavar='N',
+                        help='Project name (default: train_ticket)')
 
     # Hyperparameters
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',

@@ -46,6 +46,8 @@ def mnist_pipeline(data_dir=None, file_list=None, mode="training", crop_w=28, cr
         dtype=types.FLOAT,
         output_layout=types.NCHW,
         crop=(crop_w, crop_h),
+        mean=[128.0],
+        std=[128.0],
         mirror=fn.random.coin_flip(probability=0.0))
 
     return labels, images
