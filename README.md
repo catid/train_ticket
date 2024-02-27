@@ -1,6 +1,21 @@
-# train_ticket
+# Train Ticket (WORK IN PROGRESS)
 
-Train Ticket: Sigmoid gates are all you need?
+Sigmoid gates are all you need?
+
+This is a project inspired by the paper "Proving the Lottery Ticket Hypothesis: Pruning is All You Need" (Malach, 2020)
+https://proceedings.mlr.press/v119/malach20a/malach20a.pdf
+
+This project provides a high-performance MNIST training script using DeepSpeed and Nvidia DALI.
+
+The goal is to introduce a sigmoid-gated Hadamard product layer on top of the randomly-initialized initial weights of some standard MNIST network architectures.  The idea is that the training process will learn to "prune" the original network weights without modifying them.  This can help to prove the Strong Lottery Ticket Hypothesis described in the paper above, which states that pruning is all you need to learn a good model.
+
+So far I've just implemented a fast MNIST training script based on my CIFAR-10 training script, so it will be possible to rapidly run a hyperparameter sweep later on.
+
+TODO: Implement the sigmoid-gated Hadamard product layer and train a model with it.
+TODO: Optimize the inference code to use a simple mask instead of a sigmoid.
+TODO: Experiment with different sizes models to see what the scaling law is like for this approach.
+TODO: If it seems to be working, use a binary optimizer like https://github.com/intellhave/AdaSTE
+TODO: If that works too, implement CUDA kernels to generate the weight intializations at inference time instead of storing them in the model/VRAM.
 
 ## Setup
 
