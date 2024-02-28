@@ -11,11 +11,14 @@ The goal is to introduce a sigmoid-gated Hadamard product layer on top of the ra
 
 So far I've just implemented a fast MNIST training script based on my CIFAR-10 training script, so it will be possible to rapidly run a hyperparameter sweep later on.
 
-TODO: Implement the sigmoid-gated Hadamard product layer and train a model with it.
-TODO: Optimize the inference code to use a simple mask instead of a sigmoid.
-TODO: Experiment with different sizes models to see what the scaling law is like for this approach.
-TODO: If it seems to be working, use a binary optimizer like https://github.com/intellhave/AdaSTE
-TODO: If that works too, implement CUDA kernels to generate the weight intializations at inference time instead of storing them in the model/VRAM.
+TODO:
+
+* Implement the sigmoid-gated Hadamard product layer and train a model with it.
+* Add dense 2x diagonal into the model.
+* Optimize the inference code to use a simple mask instead of a sigmoid.
+* Experiment with different sizes models to see what the scaling law is like for this approach.
+* If it seems to be working, use a binary optimizer like https://github.com/intellhave/AdaSTE
+* If that works too, implement CUDA kernels to generate the weight intializations at inference time instead of storing them in the model/VRAM.
 
 ## Setup
 
