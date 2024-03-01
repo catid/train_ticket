@@ -7,7 +7,7 @@ https://proceedings.mlr.press/v119/malach20a/malach20a.pdf
 
 This project provides a high-performance MNIST training script using DeepSpeed and Nvidia DALI.
 
-The goal is to introduce a gated Hadamard product layer on top of the randomly-initialized initial weights of some standard MNIST network architectures.  The idea is that the training process will learn to "prune" the original network weights without modifying them.  This can help to prove the Strong Lottery Ticket Hypothesis described in the paper above, which states that pruning is all you need to learn a good model.
+The goal is to introduce a gated Hadamard product layer on top of the randomly-initialized weights of some standard MNIST network architectures.  The idea is that the training process will learn to "prune" the original network weights without modifying them.  This can help to prove the Strong Lottery Ticket Hypothesis described in the paper above, which states that pruning is all you need to learn a good model.
 
 ## Results
 
