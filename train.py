@@ -10,6 +10,7 @@ from mnist_dali_dataloader import MNISTDataLoader
 
 import argparse, random, os, json, time
 
+#from msamp import deepspeed, comm, log_dist
 import deepspeed
 from deepspeed import comm, log_dist
 

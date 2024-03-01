@@ -4,78 +4,56 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import math
 
-class CandyCaneDiagonal(nn.Module):
-    def __init__(self, rows, cols, shift=0):
-        super().__init__()
-        self.rows = rows
-        self.cols = cols
-        self.shift = shift  # Shift amount for the diagonal
-        self.values = nn.Parameter(torch.zeros(max(rows, cols)))
+def generate_weights(in_features, out_features, device='cuda', seed=42):
+    generator = torch.Generator(device=device)
+    generator.manual_seed(seed)
 
-    @staticmethod
-    def calculate_candy_cane_indices(rows, cols, shift, device):
-        max_dim = max(rows, cols)
-        stride = cols + 1 if rows >= cols else cols * (rows - 1) + 1
+    if out_features == in_features:
+        dim = in_features
+        v = torch.randn(dim, 1, generator=generator, device=device)
+        alpha = -2.0 / dim
+        return torch.eye(dim, device=device) + alpha * torch.mm(v, v.t())
 
-        # Adjust starting index based on shift
-        start_index = max(0, shift * (cols + 1 if shift > 0 else 1))
-        
-        diag_indices = torch.arange(start_index, min(rows, cols) * stride + start_index, stride, device=device) % (rows * cols)
+    d_long = max(out_features, in_features)
+    d_tiny = min(out_features, in_features)
 
-        if rows < cols:
-            extra_stride = (rows * cols) // min(rows, cols) + 1
-            extra_indices_start = diag_indices[-1] + extra_stride if diag_indices.numel() > 0 else start_index
-            extra_indices = torch.arange(extra_indices_start, max_dim * stride + start_index, stride, device=device) % (rows * cols)
-            indices = torch.cat((diag_indices, extra_indices), dim=0)
-        else:
-            indices = diag_indices
+    u = torch.randn(d_tiny, 1, generator=generator, device=device)
+    v = torch.randn(d_long - d_tiny, 1, generator=generator, device=device)
 
-        # Ensure indices are within bounds
-        indices = indices[indices < rows * cols]
+    # from "Automatic Gradient Descent: Deep Learning without Hyperparameters"
+    # https://arxiv.org/pdf/2304.05187.pdf
+    #scale = math.sqrt(out_features / in_features)
+    scale = 1.0
 
-        return indices.long()
+    I_n = torch.eye(d_tiny) * scale
+    alpha = -2.0 * scale / d_long
+    upper_block = I_n + alpha * u.mm(u.t())
+    lower_block = alpha * v.mm(u.t())
 
-    def forward(self, x):
-        indices = self.calculate_candy_cane_indices(self.rows, self.cols, self.shift, device=x.device)
+    M = torch.cat((upper_block, lower_block), dim=0)
 
-        values = self.values.clone()
-        if len(indices) > len(self.values):
-            values = torch.nn.functional.pad(values, (0, len(indices) - len(self.values)))
+    if out_features < in_features:
+        return torch.transpose(M, 0, 1)
 
-        matrix = torch.sparse_coo_tensor(indices=indices.unsqueeze(0),
-                                         values=values,
-                                         size=(self.rows * self.cols,)).to_dense()
-        return x + matrix.view(self.rows, self.cols)
+    return M
 
-class TicketLinear(nn.Module):
-    def __init__(self, in_features, out_features, bias=True):
+class MaskedPrngMatrix(nn.Module):
+    def __init__(self, in_features, out_features, seed=1):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-
-        self.weight0 = nn.Parameter(torch.Tensor(out_features, in_features), requires_grad=False)
-        init.kaiming_uniform_(self.weight0, a=math.sqrt(5.0))
-
-        self.weight1 = nn.Parameter(torch.Tensor(out_features, in_features), requires_grad=False)
-        init.kaiming_uniform_(self.weight1, a=math.sqrt(5.0))
-
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_features), requires_grad=False)
-            alpha = 1.0 / math.sqrt(in_features)
-            init.uniform_(self.bias, -alpha, alpha)
-        else:
-            self.bias = None
-
-        self.gate0 = nn.Parameter(torch.ones(out_features, in_features), requires_grad=True)
-        self.gate1 = nn.Parameter(torch.ones(out_features, in_features), requires_grad=True)
-
-        self.diag0 = CandyCaneDiagonal(out_features, in_features, shift=0)
-        self.diag1 = CandyCaneDiagonal(out_features, in_features, shift=1)
+        self.seed = seed
+        self.mask = nn.Parameter(torch.ones(out_features, in_features), requires_grad=True)
 
     def forward(self, x):
-        g = torch.sigmoid(self.gate0 * self.gate0) * self.weight0 + torch.sigmoid(self.gate1 * self.gate1) * self.weight1
+        M = generate_weights(self.in_features, self.out_features, x.device, self.seed)
+        gate = (self.mask + 1.0) * 0.5 # TODO: Learn 0..1 directly
+        return F.linear(x, gate * M)
 
-        g = self.diag0(g)
-        g = self.diag1(g)
+class TicketLinear(nn.Module):
+    def __init__(self, in_features, out_features, seed=1):
+        super().__init__()
+        self.masked_prng = MaskedPrngMatrix(in_features, out_features, seed=seed)
 
-        return F.linear(x, g, self.bias)
+    def forward(self, x):
+        return self.masked_prng(x)

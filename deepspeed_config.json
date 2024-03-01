@@ -29,6 +29,11 @@
       "hysteresis": 2,
       "min_loss_scale": 1
     },
+    "msamp": {
+      "enabled": true,
+      "opt_level": "O2",
+      "use_te": false
+    },
     "zero_optimization": {
       "stage": 0,
       "allgather_partitions": true,

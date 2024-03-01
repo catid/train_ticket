@@ -24,18 +24,12 @@ TODO:
 
 Install conda: https://docs.conda.io/projects/miniconda/en/latest/index.html
 
-Make sure your Nvidia drivers are installed properly by running `nvidia-smi`.  If not, you may need to run something like `sudo apt install nvidia-driver-535-server` or newer.
+Install CUDA toolkit from https://developer.nvidia.com/cuda-downloads  This also installs the Nvidia kernel drivers, so you may need to uninstall the old drivers and reboot.
 
-Install CUDA toolkit:
-
-```bash
-# Here's how to do it on Ubuntu:
-sudo apt install nvidia-cuda-toolkit
-```
-
-Make sure you can use `nvcc`:
+Make sure you can use `nvcc` and the version matches `nvidia-smi`.  Version should show 12.3 or newer.
 
 ```bash
+nvidia-smi
 nvcc --version
 ```
 
@@ -46,10 +40,10 @@ cd train_ticket
 conda create -n tt python=3.10 -y && conda activate tt
 
 # Update this from https://pytorch.org/get-started/locally/
-pip install --upgrade torch --extra-index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio -f https://download.pytorch.org/whl/cu123/torch_stable.html
 
 # Update this from https://github.com/NVIDIA/DALI#installing-dali
-pip install --upgrade nvidia-dali-cuda110 --extra-index-url https://developer.download.nvidia.com/compute/redist
+pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda120
 
 pip install -U -r requirements.txt
 ```
