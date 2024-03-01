@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import math
 
+DISABLE_TICKET_LINEAR = False
+
 def generate_weights(in_features, out_features, device='cuda', dtype=torch.float32, seed=42):
     generator = torch.Generator(device=device)
     generator.manual_seed(seed)
@@ -61,14 +63,21 @@ class MaskedPrngMatrix(nn.Module):
 class TicketLinear(nn.Module):
     def __init__(self, in_features, out_features, bias=True, seed=1):
         super().__init__()
-        self.masked_prng = MaskedPrngMatrix(in_features, out_features, seed=seed)
 
+        if DISABLE_TICKET_LINEAR:
+            self.proj = nn.Linear(in_features, out_features, bias=bias)
+            return
+
+        self.masked_prng = MaskedPrngMatrix(in_features, out_features, seed=seed)
         if bias:
             self.bias = nn.Parameter(torch.zeros(out_features), requires_grad=True)
         else:
             self.bias = None
 
     def forward(self, x):
+        if DISABLE_TICKET_LINEAR:
+            return self.proj(x)
+
         y = self.masked_prng(x)
         if self.bias is not None:
             y = y + self.bias

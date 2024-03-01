@@ -1,24 +1,31 @@
-# Train Ticket (WORK IN PROGRESS)
+# Train Ticket
 
-Sigmoid gates are all you need?
+Gated PRNGs are all you need?  Spoilers: No.
 
 This is a project inspired by the paper "Proving the Lottery Ticket Hypothesis: Pruning is All You Need" (Malach, 2020)
 https://proceedings.mlr.press/v119/malach20a/malach20a.pdf
 
 This project provides a high-performance MNIST training script using DeepSpeed and Nvidia DALI.
 
-The goal is to introduce a sigmoid-gated Hadamard product layer on top of the randomly-initialized initial weights of some standard MNIST network architectures.  The idea is that the training process will learn to "prune" the original network weights without modifying them.  This can help to prove the Strong Lottery Ticket Hypothesis described in the paper above, which states that pruning is all you need to learn a good model.
+The goal is to introduce a gated Hadamard product layer on top of the randomly-initialized initial weights of some standard MNIST network architectures.  The idea is that the training process will learn to "prune" the original network weights without modifying them.  This can help to prove the Strong Lottery Ticket Hypothesis described in the paper above, which states that pruning is all you need to learn a good model.
 
-So far I've just implemented a fast MNIST training script based on my CIFAR-10 training script, so it will be possible to rapidly run a hyperparameter sweep later on.
+## Results
 
-TODO:
+Okay so I put it into a 4-layer ViT and trained it on MNIST. Observations:
 
-* Implement the sigmoid-gated Hadamard product layer and train a model with it.
-* Add dense 2x diagonal into the model.
-* Optimize the inference code to use a simple mask instead of a sigmoid.
-* Experiment with different sizes models to see what the scaling law is like for this approach.
-* If it seems to be working, use a binary optimizer like https://github.com/intellhave/AdaSTE
-* If that works too, implement CUDA kernels to generate the weight intializations at inference time instead of storing them in the model/VRAM.
+* Baseline converges to 95% accuracy in like 2 epochs.
+* Baseline takes 4.8 seconds per epoch (seems a bit long?)
+* Train Ticket Linear version takes much longer to converge to 95% (20 epochs).
+* Train Ticket Linear version takes 6.6 seconds per epoch.
+
+Similar results from CNN/MLP models:
+
+* Baseline converges to 98.77% accuracy in 38 epochs.
+* Train Ticket converges to 98.37% accuracy in 100 epochs.
+
+So the binary model training is much slower, converges much slower, and is not as accurate.
+
+I might revisit this later to see if I can improve the training speed and accuracy, but this seems like a good place to stop for now.
 
 ## Setup
 
