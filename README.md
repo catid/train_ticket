@@ -9,6 +9,8 @@ This project provides a high-performance MNIST training script using DeepSpeed a
 
 The goal is to introduce a gated Hadamard product layer on top of the randomly-initialized weights of some standard MNIST network architectures.  The idea is that the training process will learn to "prune" the original network weights without modifying them.  This can help to prove the Strong Lottery Ticket Hypothesis described in the paper above, which states that pruning is all you need to learn a good model.
 
+It would be cool if it worked.  The weights of the model would be (mostly) binary.
+
 ## Results
 
 Okay so I put it into a 4-layer ViT and trained it on MNIST. Observations:
