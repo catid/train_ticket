@@ -1,6 +1,7 @@
 deepspeed
 numpy
 wandb
+einops
 
 colorama
 Pillow

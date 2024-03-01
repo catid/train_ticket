@@ -6,10 +6,7 @@ import torch.optim as optim
 import torch.nn.init as init
 import math
 
-enable_bop = True
-
-# Assuming BayesBiNN class is already defined as provided above
-from optimizers.BayesBiNN import BayesBiNN
+dim = 2048
 
 def generate_weights(in_features, out_features, device='cuda', seed=42):
     generator = torch.Generator(device=device)
@@ -43,43 +40,57 @@ def generate_weights(in_features, out_features, device='cuda', seed=42):
 
     return M
 
+class STEBinaryQuantizeFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input):
+        return input > 0
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output
+
 class MaskedPrngMatrix(nn.Module):
     def __init__(self, in_features, out_features, seed=1):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.seed = seed
-        #self.weight = nn.Parameter(torch.ones(out_features, in_features), requires_grad=True)
-        #torch.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5.0))
         self.mask = nn.Parameter(torch.ones(out_features, in_features), requires_grad=True)
 
     def forward(self, x):
         M = generate_weights(self.in_features, self.out_features, x.device, self.seed)
-        #M = self.weight
-        gate = (self.mask + 1.0) * 0.5 # TODO: Learn 0..1 directly
-        return F.linear(x, gate * M)
+        mask = STEBinaryQuantizeFunction.apply(self.mask)
+        return F.linear(x, mask * M)
 
 class TicketLinear(nn.Module):
-    def __init__(self, in_features, out_features, seed=1):
+    def __init__(self, in_features, out_features, bias=True, seed=1):
         super().__init__()
         self.masked_prng = MaskedPrngMatrix(in_features, out_features, seed=seed)
 
+        if bias:
+            self.bias = nn.Parameter(torch.zeros(out_features), requires_grad=True)
+        else:
+            self.bias = None
+
     def forward(self, x):
-        return self.masked_prng(x)
+        y = self.masked_prng(x)
+        if self.bias is not None:
+            y = y + self.bias
+        return y
+
 
 # Step 1: Model Definition
 class SimpleBinaryNet(nn.Module):
     def __init__(self):
         super(SimpleBinaryNet, self).__init__()
-        if enable_bop:
-            self.fc1 = TicketLinear(10, 1024)  # Example layer
-        else:
-            self.fc1 = nn.Linear(10, 1024)  # Example layer
-        self.fc2 = nn.Linear(1024, 1)   # Output layer for binary classification
+        self.fc1 = nn.Linear(10, dim)
+        self.fc2 = TicketLinear(dim, dim)
+        self.fc3 = nn.Linear(dim, 1)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
-        x = torch.sigmoid(self.fc2(x))  # Sigmoid activation for binary output
+        x = torch.relu(self.fc2(x))
+        x = torch.sigmoid(self.fc3(x))  # Sigmoid activation for binary output
         return x
 
 # Step 2: Create a synthetic dataset
@@ -94,50 +105,18 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 model = SimpleBinaryNet().cuda()
 loss_function = nn.BCELoss()  # Binary Cross-Entropy Loss for binary classification
 
-def setup_optimizers(model):
-    # Lists to hold parameters of TicketLinear layers and all other layers
-    binary_params = []
-    other_params = []
-    
-    # Scan the model for parameters
-    for name, module in model.named_modules():
-        if isinstance(module, MaskedPrngMatrix):
-            print(f"XXX Found {len(list(module.children()))} parameters in MaskedPrngMatrix")
-            binary_params.extend(list(module.parameters()))
-        else:
-            print(f"Found {len(list(module.parameters()))} parameters in {name}")
-            # Assuming you want to exclude top-level nn.Module parameters that are not layers (e.g., nn.Linear, nn.Conv2d)
-            if len(list(module.children())) == 0:  # This checks if the module is a leaf node (no children)
-                other_params.extend(list(module.parameters()))
-
-    # Define separate optimizers for each parameter group
-    optimizer = BayesBiNN(binary_params, train_set_size=len(dataset), lr=3e-4, betas=0.9)
-    optimizer_others = optim.AdamW(other_params, lr=0.01)
-
-    return optimizer, optimizer_others
-
 # Training Loop
-def train(model, bop, optimizer, loss_function, dataloader):
+def train(model, optimizer, loss_function, dataloader):
     model.train()
-    for epoch in range(200):  # Train for 5 epochs
+    for epoch in range(500):
         for inputs, targets in dataloader:
             inputs, targets = inputs.cuda(), targets.cuda()
 
-            if bop:
-                bop.zero_grad()
             optimizer.zero_grad()
             outputs = model(inputs)  # Forward pass
             loss = loss_function(outputs, targets)  # Compute loss
             loss.backward()  # Backward pass to calculate gradients
 
-            # Closure function that returns the loss
-            def closure():
-                outputs = model(inputs)  # Forward pass
-                loss = loss_function(outputs, targets)  # Compute loss
-                return loss, outputs
-
-            if bop:
-                loss, _ = bop.step(closure)
             optimizer.step()
     model.eval()
     avg_loss = 0.0
@@ -151,17 +130,14 @@ def train(model, bop, optimizer, loss_function, dataloader):
         count += 1
     print(f'avg_loss: {avg_loss / count}')
 
-if enable_bop:
-    bop, optimizer = setup_optimizers(model)
-else:
-    bop, optimizer = None, optim.AdamW(model.parameters(), lr=0.01)
+optimizer = optim.AdamW(model.parameters(), lr=0.01)
 
 # Call the training function
-train(model, bop, optimizer, loss_function, dataloader)
+train(model, optimizer, loss_function, dataloader)
 
 def print_model_weights(model):
     for name, param in model.named_parameters():
         if param.requires_grad:
             print(f"{name}, shape: {param.data.shape}\nWeights:\n{param.data}\n")
 
-#print_model_weights(model)
+print_model_weights(model)

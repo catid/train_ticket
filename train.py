@@ -365,7 +365,7 @@ if __name__ == '__main__':
     parser.add_argument('--fp32', action='store_true', default=False,
                         help='FP32')
     parser.add_argument("--nocompile", action="store_true", help="Disable torch.compile")
-    parser.add_argument('--arch', type=str, default="simple_mlp", metavar='N',
+    parser.add_argument('--arch', type=str, default="vit_tiny", metavar='N',
                         help='Model architecture')
 
     parser.add_argument("--dataset-dir", type=str, default=str("mnist"), help="Path to the dataset directory")
